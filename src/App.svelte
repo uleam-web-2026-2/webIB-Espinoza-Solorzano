@@ -5,8 +5,8 @@
 <header>
   <p>TutorHub</p>
   <nav aria-label="Principal">
-    <a href="#">Tutoriales</a>
-    <a href="#">Categorías</a>
+    <a href="/tutoriales">Tutoriales</a>
+    <a href="/categorias">Categorías</a>
   </nav>
 </header>
 
@@ -31,7 +31,7 @@
         <td>Programación</td>
         <td>Paso a paso</td>
         <td>Borrador</td>
-        <td><a href="#">Ver</a></td>
+        <td><a href="/tutoriales/1">Ver</a></td>
       </tr>
 
       <tr>
@@ -39,7 +39,7 @@
         <td>Diseño</td>
         <td>Video</td>
         <td>En revisión</td>
-        <td><a href="#">Ver</a></td>
+        <td><a href="/tutoriales/2">Ver</a></td>
       </tr>
 
       <tr>
@@ -47,10 +47,9 @@
         <td>Bases de datos</td>
         <td>Paso a paso</td>
         <td>Publicado</td>
-        <td><a href="#">Ver</a></td>
+        <td><a href="/tutoriales/3">Ver</a></td>
       </tr>
     </tbody>
   </table>
   <Formulario />
-</main>
-`
+</main>

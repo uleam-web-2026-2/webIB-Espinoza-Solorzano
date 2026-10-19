@@ -11,17 +11,24 @@
   td {
     display: block;
   }
-  
 }
+
 label {
   display: block;
   margin-top: 1.25rem;
 }
 
-input, select, textarea {
+input,
+select,
+textarea {
   display: block;
   width: 100%;
+  box-sizing: border-box;
   padding: 0.6rem 0.75rem;
+}
+
+form {
+  max-width: 32rem;
 }
 
 button {
@@ -32,4 +39,14 @@ button {
   color: #b3261e;
   font-size: 0.9rem;
   margin-top: 0.25rem;
+}
+
+.mensaje-exito {
+  color: #155724;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  padding: 0.75rem;
+  margin-top: 1rem;
+  border-radius: 4px;
+  font-weight: 500;
 }
