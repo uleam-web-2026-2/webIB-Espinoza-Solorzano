@@ -1,3 +1,8 @@
+body {
+  background-color: #ffffff;
+  color: #1a1a1a;
+}
+
 @media (max-width: 600px) {
   thead {
     display: none;
@@ -11,6 +16,12 @@
   td {
     display: block;
   }
+}
+
+.detalle-tutorial,
+.seccion-acceso,
+.nuevo-tutorial {
+  margin-top: 2rem;
 }
 
 label {
@@ -29,6 +40,10 @@ textarea {
 
 form {
   max-width: 32rem;
+}
+
+form button {
+  margin-top: 1rem;
 }
 
 button {
