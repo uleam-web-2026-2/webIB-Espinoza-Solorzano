@@ -36,25 +36,36 @@
   let errorCategoria = $derived(submitted && categoria === '');
   let errorFormato = $derived(submitted && formato === '');
 
-  function traducirRechazoServidor(status: number, mensaje?: string): string {
+  function traducirRechazoServidor(
+    status: number,
+    tieneSesion: boolean,
+    mensaje?: string
+  ): string {
     const texto = (mensaje ?? '').toLowerCase();
 
-    if (texto.includes('permission denied')) {
-      return `Supabase rechazó la creación (HTTP ${status}): no tiene permisos de inserción sin iniciar sesión.`;
+    if (!tieneSesion || status === 401 || texto.includes('permission denied')) {
+      return 'No se pudo guardar el tutorial. Inicie sesión con una cuenta de Creador para continuar.';
     }
 
-    if (texto.includes('row-level security policy')) {
-      return `Supabase rechazó la creación (HTTP ${status}): la política de seguridad (RLS) no autoriza esta operación.`;
+    if (status === 403 || texto.includes('row-level security policy')) {
+      return 'Su cuenta no tiene permisos para crear tutoriales. Esta acción es exclusiva del rol Creador.';
     }
 
-    if (status === 401 || status === 403) {
-      return `Supabase rechazó la creación (HTTP ${status}): operación no autorizada. Inicie sesión como Creador.`;
+    return 'No se pudo guardar el tutorial en este momento. Inténtelo nuevamente.';
+  }
+
+  function traducirErrorFormulario(err: unknown, respaldo: string): string {
+    if (err instanceof Error) {
+      const texto = err.message.toLowerCase();
+
+      if (texto.includes('failed to fetch') || texto.includes('networkerror')) {
+        return 'Sin conexión a internet. Verifique su red e inténtelo nuevamente.';
+      }
+
+      return err.message;
     }
 
-    return (
-      `Supabase rechazó la creación (HTTP ${status}). ` +
-      (mensaje ?? 'Operación no autorizada.')
-    );
+    return respaldo;
   }
 
   // Obtener categorías reales desde Supabase
@@ -64,7 +75,7 @@
 
     try {
       if (!URL_BASE || !CLAVE) {
-        throw new Error('Falta configurar la conexión con Supabase.');
+        throw new Error('El servicio no está disponible en este momento.');
       }
 
       const respuesta = await fetch(
@@ -78,16 +89,16 @@
 
       if (!respuesta.ok) {
         throw new Error(
-          `No se pudieron consultar las categorías: HTTP ${respuesta.status}`
+          'No se pudieron cargar las categorías disponibles. Inténtelo nuevamente.'
         );
       }
 
       categorias = (await respuesta.json()) as Categoria[];
     } catch (err) {
-      errorCategorias =
-        err instanceof Error
-          ? err.message
-          : 'No se pudieron cargar las categorías.';
+      errorCategorias = traducirErrorFormulario(
+        err,
+        'No se pudieron cargar las categorías.'
+      );
     } finally {
       cargandoCategorias = false;
     }
@@ -114,7 +125,7 @@
 
     try {
       if (!URL_BASE || !CLAVE) {
-        throw new Error('Falta configurar la conexión con Supabase.');
+        throw new Error('El servicio no está disponible en este momento.');
       }
 
       // Consultar si existe una sesión de Supabase
@@ -124,7 +135,9 @@
       } = await supabase.auth.getSession();
 
       if (errorSesion) {
-        throw errorSesion;
+        throw new Error(
+          'No se pudo comprobar su sesión. Vuelva a iniciar sesión e inténtelo de nuevo.'
+        );
       }
 
       // El ID 1 corresponde al Creador de prueba.
@@ -148,7 +161,7 @@
 
         if (!respuestaPerfil.ok) {
           throw new Error(
-            `Error consultando el perfil: HTTP ${respuestaPerfil.status}`
+            'No se pudo verificar su cuenta en este momento. Inténtelo nuevamente.'
           );
         }
 
@@ -159,13 +172,13 @@
 
         if (perfiles.length === 0) {
           throw new Error(
-            'Tu cuenta no tiene un perfil vinculado en TutorHub.'
+            'Su cuenta aún no tiene un perfil asignado en TutorHub.'
           );
         }
 
         if (perfiles[0].rol !== 'Creador') {
           throw new Error(
-            'Solamente el rol Creador puede crear tutoriales.'
+            'Su cuenta no tiene permisos para crear tutoriales. Esta acción es exclusiva del rol Creador.'
           );
         }
 
@@ -212,12 +225,16 @@
           .catch(() => null)) as { message?: string } | null;
 
         throw new Error(
-          traducirRechazoServidor(respuesta.status, datosError?.message)
+          traducirRechazoServidor(
+            respuesta.status,
+            Boolean(session),
+            datosError?.message
+          )
         );
       }
 
       // Solo mostrar éxito cuando Supabase confirma el POST
-      mensajeExito = `¡Tutorial "${titulo.trim()}" guardado correctamente en borrador!`;
+      mensajeExito = `El tutorial «${titulo.trim()}» se guardó como borrador y ya aparece en el listado.`;
 
       // Limpiar campos después del éxito
       titulo = '';
@@ -229,10 +246,10 @@
       // Avisar a App.svelte para actualizar el listado
       onTutorialCreado?.();
     } catch (err) {
-      errorServidor =
-        err instanceof Error
-          ? err.message
-          : 'Ocurrió un error al guardar el tutorial.';
+      errorServidor = traducirErrorFormulario(
+        err,
+        'No se pudo guardar el tutorial. Inténtelo nuevamente.'
+      );
 
       // En caso de error NO limpiamos los campos
     } finally {
@@ -258,7 +275,7 @@
 
     {#if errorTitulo}
       <p id="titulo-error" class="mensaje-error" role="alert">
-        Error: Ingrese el título del tutorial.
+        Escriba un título para el tutorial.
       </p>
     {/if}
 
@@ -295,7 +312,7 @@
 
     {#if errorCategoria}
       <p id="categoria-error" class="mensaje-error" role="alert">
-        Error: Seleccione una categoría.
+        Seleccione una categoría para el tutorial.
       </p>
     {/if}
 
@@ -316,7 +333,7 @@
 
     {#if errorFormato}
       <p id="formato-error" class="mensaje-error" role="alert">
-        Error: Seleccione un formato.
+        Seleccione el formato del tutorial.
       </p>
     {/if}
 
