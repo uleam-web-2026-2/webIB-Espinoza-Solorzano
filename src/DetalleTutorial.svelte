@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { supabase } from './supabase';
   import type {
     EstadoTutorial,
     FormatoTutorial,
@@ -44,6 +45,18 @@
         throw new Error('Falta configurar Supabase.');
       }
 
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const encabezados: Record<string, string> = {
+        apikey: clave,
+      };
+
+      if (session) {
+        encabezados.Authorization = `Bearer ${session.access_token}`;
+      }
+
       // Obtener únicamente los pasos del tutorial elegido en orden ascendente
       const url =
         `${base}/rest/v1/pasos_tutorial` +
@@ -52,9 +65,7 @@
 
       const respuesta = await fetch(url, {
         method: 'GET',
-        headers: {
-          apikey: clave,
-        },
+        headers: encabezados,
       });
 
       if (!respuesta.ok) {
@@ -127,4 +138,3 @@
     </ol>
   {/if}
 </section>
-
