@@ -22,6 +22,64 @@
   let formato = $state('');
   let descripcion = $state('');
 
+  // Fase 4: conservar el borrador en esta pestaña.
+  const CLAVE_BORRADOR = 'tutorhub.borrador';
+
+  function guardarBorrador(evento: Event): void {
+    const formulario = evento.currentTarget;
+
+    if (!(formulario instanceof HTMLFormElement)) {
+      return;
+    }
+
+    const datos = new FormData(formulario);
+
+    const borrador = {
+      titulo: String(datos.get('titulo') ?? ''),
+      categoria: String(datos.get('categoria') ?? ''),
+      formato: String(datos.get('formato') ?? ''),
+      descripcion: String(datos.get('descripcion') ?? ''),
+    };
+
+    sessionStorage.setItem(
+      CLAVE_BORRADOR,
+      JSON.stringify(borrador)
+    );
+  }
+
+  function recuperarBorrador(): void {
+    const guardado = sessionStorage.getItem(CLAVE_BORRADOR);
+
+    if (!guardado) {
+      return;
+    }
+
+    try {
+      const datos: unknown = JSON.parse(guardado);
+
+      if (!datos || typeof datos !== 'object') {
+        throw new Error('Borrador inválido');
+      }
+
+      const borrador = datos as Record<string, unknown>;
+
+      titulo = typeof borrador.titulo === 'string'
+        ? borrador.titulo : '';
+
+      categoria = typeof borrador.categoria === 'string'
+        ? borrador.categoria : '';
+
+      formato = typeof borrador.formato === 'string'
+        ? borrador.formato : '';
+
+      descripcion = typeof borrador.descripcion === 'string'
+        ? borrador.descripcion : '';
+
+    } catch {
+      sessionStorage.removeItem(CLAVE_BORRADOR);
+    }
+  }
+
   let categorias = $state<Categoria[]>([]);
   let cargandoCategorias = $state(true);
   let errorCategorias = $state('');
@@ -105,6 +163,7 @@
   }
 
   onMount(() => {
+    recuperarBorrador();
     void cargarCategorias();
   });
 
@@ -237,6 +296,8 @@
       mensajeExito = `El tutorial «${titulo.trim()}» se guardó como borrador y ya aparece en el listado.`;
 
       // Limpiar campos después del éxito
+      // Eliminar el borrador solo después del POST exitoso.
+      sessionStorage.removeItem(CLAVE_BORRADOR);
       titulo = '';
       categoria = '';
       formato = '';
@@ -261,7 +322,11 @@
 <section class="nuevo-tutorial" aria-labelledby="titulo-nuevo">
   <h2 id="titulo-nuevo">Nuevo tutorial</h2>
 
-  <form onsubmit={handleSubmit} novalidate>
+  <form
+    onsubmit={handleSubmit}
+    oninput={guardarBorrador}
+    novalidate
+  >
     <label for="titulo">Título del tutorial</label>
     <input
       id="titulo"
