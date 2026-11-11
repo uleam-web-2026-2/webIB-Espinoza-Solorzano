@@ -17,6 +17,8 @@
 
   // Taller 10: petición PATCH a Supabase.
   import { cambiarEstadoTutorial } from "./tutoriales";
+  import { leerFiltro, guardarFiltro } from "./filtro";
+  import type { FiltroTutorial } from "./filtro";
 
   import type {
     EstadoTutorial,
@@ -41,6 +43,18 @@
 
 
   let tutoriales = $state<TutorialConCategoria[]>([]);
+
+  // Fase 3: filtro persistente de tutoriales.
+  let filtro = $state<FiltroTutorial>("todos");
+
+  // Mostrar solo los tutoriales que coinciden.
+  let tutorialesFiltrados = $derived(
+    filtro === "todos"
+      ? tutoriales
+      : tutoriales.filter(
+          (tutorial) => tutorial.estado === filtro
+        )
+  );
 
   let tutorialSeleccionado =
     $state<TutorialConCategoria | null>(null);
@@ -233,6 +247,9 @@
         }, 0);
       }
     );
+
+    // Recuperar el filtro guardado.
+    filtro = leerFiltro();
 
     // Carga inicial de la aplicación.
     void cargarTutoriales();
@@ -471,6 +488,28 @@
     </p>
   {/if}
 
+  <!-- Fase 3: filtro persistente -->
+  <div>
+    <label for="filtro-estado">Filtrar por estado:</label>
+
+    <select
+      id="filtro-estado"
+      value={filtro}
+      onchange={(evento) => {
+        const seleccionado =
+          evento.currentTarget.value as FiltroTutorial;
+
+        filtro = seleccionado;
+        guardarFiltro(seleccionado);
+      }}
+    >
+      <option value="todos">Todos</option>
+      <option value="borrador">Borrador</option>
+      <option value="en_revision">En revisión</option>
+      <option value="publicado">Publicado</option>
+    </select>
+  </div>
+
   <!-- Listado de tutoriales -->
   {#if cargando}
     <p role="status">
@@ -496,6 +535,11 @@
         : "No hay tutoriales publicados."}
     </p>
 
+  {:else if tutorialesFiltrados.length === 0}
+    <p role="status">
+      Ningún tutorial coincide con el filtro seleccionado.
+    </p>
+
   {:else}
     <table>
       <caption>
@@ -514,7 +558,7 @@
       </thead>
 
       <tbody>
-        {#each tutoriales as tutorial (tutorial.id)}
+        {#each tutorialesFiltrados as tutorial (tutorial.id)}
           <tr>
             <td>
               {tutorial.titulo}
