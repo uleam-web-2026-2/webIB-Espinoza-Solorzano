@@ -87,8 +87,38 @@ TutorHub — Svelte 5, TypeScript y Supabase.
 
 ---
 
+
+## Caso 4: Recuperación ante un token inválido
+
+**Objetivo:** Comprobar que TutorHub se recupera cuando el token de autenticación deja de ser válido.
+
+**Procedimiento:**
+1. Iniciar sesión como Creador.
+2. Modificar el `access_token` almacenado en `localStorage`.
+3. Recargar la aplicación con F5.
+4. Observar las peticiones en Network.
+5. Corregir la validación de la sesión y repetir la prueba.
+
+**Petición:** GET al endpoint de autenticación `user`.
+
+**Código HTTP observado:** 403.
+
+**Respuesta:** Supabase rechazó la autenticación con el token inválido.
+
+**Comportamiento antes de la corrección:** TutorHub mostraba errores de autorización y seguía indicando que la sesión estaba iniciada.
+
+**Comportamiento después de la corrección:** TutorHub volvió al modo visitante, mostró los tutoriales publicados y permitió iniciar sesión nuevamente.
+
+**Verificación adicional:** Después de otro F5, la aplicación permaneció en modo visitante y las consultas públicas devolvieron HTTP 200.
+
+**Resultado:** Prueba satisfactoria. Se implementó la comprobación del usuario con `supabase.auth.getUser()` y la limpieza de la sesión inválida.
+
+**Evidencias:**
+- `capturas/caso4_error_inicial.png`
+- `capturas/caso4.png`
+
+---
+
 ## Pruebas pendientes
 
-Los casos 3, 4 y 5 se incorporarán cuando se realicen sus pruebas correspondientes.
-
-No se registrarán resultados ni códigos HTTP que todavía no se hayan comprobado.
+Los casos 3 y 5 se documentarán cuando se realicen sus pruebas.

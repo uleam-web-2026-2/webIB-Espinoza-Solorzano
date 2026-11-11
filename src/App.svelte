@@ -36,9 +36,9 @@
   const CLAVE_PUBLICA =
     import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-  // ==========================================
+
   // 1. ESTADO DE LA APLICACIÓN
-  // ==========================================
+
 
   let tutoriales = $state<TutorialConCategoria[]>([]);
 
@@ -62,9 +62,9 @@
   let mensajeCambio = $state("");
   let errorCambio = $state("");
 
-  // ==========================================
+
   // 2. CARGAR TUTORIALES DESDE SUPABASE
-  // ==========================================
+
 
   async function cargarTutoriales(): Promise<void> {
     cargando = true;
@@ -79,14 +79,41 @@
         );
       }
 
-      // Obtener la sesión actual.
+      // Recuperar la sesión guardada en el navegador.
       const {
-        data: { session },
+        data: { session: sesionGuardada },
         error: errorSesion,
       } = await supabase.auth.getSession();
 
       if (errorSesion) {
         throw errorSesion;
+      }
+
+      let session = sesionGuardada;
+
+      // Comprobar que el token sea válido en Supabase.
+      if (session) {
+        const {
+          data: { user },
+          error: errorUsuario,
+        } = await supabase.auth.getUser();
+
+        // No cerrar la sesión por errores de red o servidor.
+        if (
+          errorUsuario &&
+          ![400, 401, 403].includes(errorUsuario.status ?? 0)
+        ) {
+          throw errorUsuario;
+        }
+
+        // Si el token es inválido, limpiar la sesión local.
+        if (errorUsuario || !user) {
+          await supabase.auth.signOut({ scope: "local" });
+
+          session = null;
+          tutorialSeleccionado = null;
+          tutoriales = [];
+        }
       }
 
       sesionActiva = Boolean(session);
@@ -158,9 +185,9 @@
     }
   }
 
-  // ==========================================
+
   // 3. CONTROL DE LA SESIÓN
-  // ==========================================
+
 
   onMount(() => {
     let componenteActivo = true;
@@ -217,9 +244,7 @@
     };
   });
 
-  // ==========================================
   // 4. MOSTRAR FORMATOS
-  // ==========================================
 
   function mostrarFormato(
     formato: FormatoTutorial
@@ -235,9 +260,7 @@
     return "Interactivo";
   }
 
-  // ==========================================
   // 5. TRANSICIONES PERMITIDAS POR ROL
-  // ==========================================
 
   function estadosPermitidos(
     tutorial: TutorialConCategoria
@@ -267,9 +290,9 @@
     );
   }
 
-  // ==========================================
+
   // 6. COMPROBAR PASOS DEL TUTORIAL
-  // ==========================================
+
 
   async function tienePasos(
     idTutorial: number
@@ -307,9 +330,9 @@
     return pasos.length > 0;
   }
 
-  // ==========================================
+
   // 7. CAMBIAR ESTADO EN SUPABASE
-  // ==========================================
+
 
   async function cambiarEstado(
     tutorial: TutorialConCategoria,
