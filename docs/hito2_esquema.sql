@@ -1,11 +1,13 @@
--- TutorHub — Hito 2: Esquema de base de datos, permisos y políticas RLS en Supabase
+
+-- TutorHub — Hito 2 + Taller 10
+-- Esquema de base de datos, permisos y políticas RLS en Supabase
 -- Pareja: Carlos Enrique Espinoza Ponce · Roberth Mauricio Solorzano Garcia
 
 BEGIN;
 
-
+-- =====================================================
 -- 1. TABLAS DEL MODELO DE DATOS (5 ENTIDADES DEL HITO 1)
-
+-- =====================================================
 
 -- 1.1 Usuarios
 CREATE TABLE public.usuarios (
@@ -72,9 +74,9 @@ CREATE TABLE public.revisiones (
     revisor_id BIGINT NOT NULL REFERENCES public.usuarios(id)
 );
 
-
--- 2. SEGURIDAD A NIVEL DE FILA (RLS) Y PERMISOS DE ROL (GRANTS)
-
+-- =====================================================
+-- 2. SEGURIDAD A NIVEL DE FILA (RLS) Y PERMISOS
+-- =====================================================
 
 -- 2.1 Habilitar RLS en todas las tablas
 ALTER TABLE public.usuarios ENABLE ROW LEVEL SECURITY;
@@ -86,7 +88,7 @@ ALTER TABLE public.revisiones ENABLE ROW LEVEL SECURITY;
 -- 2.2 Permitir acceso al esquema público
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 
--- 2.3 Establecer permisos mínimos (revocar por defecto)
+-- 2.3 Establecer permisos mínimos
 REVOKE ALL ON public.usuarios,
     public.categorias,
     public.tutoriales,
@@ -94,7 +96,7 @@ REVOKE ALL ON public.usuarios,
     public.revisiones
 FROM anon, authenticated;
 
--- Consultas públicas necesarias (filtradas por RLS)
+-- Consultas públicas necesarias, filtradas por RLS
 GRANT SELECT ON public.categorias,
     public.tutoriales,
     public.pasos_tutorial
@@ -103,15 +105,16 @@ TO anon, authenticated;
 -- Un usuario autenticado puede consultar su perfil
 GRANT SELECT ON public.usuarios TO authenticated;
 
--- La creación de tutoriales requiere sesión autenticada (anon recibe HTTP 401)
+-- La creación de tutoriales requiere sesión autenticada
 GRANT INSERT ON public.tutoriales TO authenticated;
 
-
--- 3. POLÍTICAS RLS ACTIVAS
-
+-- =====================================================
+-- 3. POLÍTICAS RLS DEL HITO 2
+-- =====================================================
 
 -- Política 1: Consulta pública de categorías
-DROP POLICY IF EXISTS categorias_consultar ON public.categorias;
+DROP POLICY IF EXISTS categorias_consultar
+ON public.categorias;
 
 CREATE POLICY categorias_consultar
 ON public.categorias
@@ -120,7 +123,8 @@ TO anon, authenticated
 USING (true);
 
 -- Política 2: Consultar únicamente el perfil propio
-DROP POLICY IF EXISTS usuarios_perfil_propio ON public.usuarios;
+DROP POLICY IF EXISTS usuarios_perfil_propio
+ON public.usuarios;
 
 CREATE POLICY usuarios_perfil_propio
 ON public.usuarios
@@ -130,8 +134,9 @@ USING (
     auth_user_id = (SELECT auth.uid())
 );
 
--- Política 3: Ver tutoriales publicados (con o sin sesión)
-DROP POLICY IF EXISTS tutoriales_publicados ON public.tutoriales;
+-- Política 3: Ver tutoriales publicados
+DROP POLICY IF EXISTS tutoriales_publicados
+ON public.tutoriales;
 
 CREATE POLICY tutoriales_publicados
 ON public.tutoriales
@@ -141,8 +146,11 @@ USING (
     estado = 'publicado'
 );
 
--- Política 4: Gestión de tutoriales (Creador ve los suyos; Revisor ve todos)
-DROP POLICY IF EXISTS tutoriales_gestion ON public.tutoriales;
+-- Política 4: Gestión de tutoriales
+-- Creador: puede consultar sus propios tutoriales
+-- Revisor: puede consultar todos los tutoriales
+DROP POLICY IF EXISTS tutoriales_gestion
+ON public.tutoriales;
 
 CREATE POLICY tutoriales_gestion
 ON public.tutoriales
@@ -163,8 +171,9 @@ USING (
     )
 );
 
--- Política 5: Consultar pasos únicamente de tutoriales visibles para el rol actual
-DROP POLICY IF EXISTS pasos_consultar ON public.pasos_tutorial;
+-- Política 5: Consultar pasos de tutoriales visibles
+DROP POLICY IF EXISTS pasos_consultar
+ON public.pasos_tutorial;
 
 CREATE POLICY pasos_consultar
 ON public.pasos_tutorial
@@ -178,8 +187,10 @@ USING (
     )
 );
 
--- Política 6: Solo un Creador autenticado puede insertar borradores propios
-DROP POLICY IF EXISTS tutoriales_crear ON public.tutoriales;
+-- Política 6: Solo un Creador autenticado
+-- puede insertar sus propios borradores
+DROP POLICY IF EXISTS tutoriales_crear
+ON public.tutoriales;
 
 CREATE POLICY tutoriales_crear
 ON public.tutoriales
@@ -193,6 +204,77 @@ WITH CHECK (
         WHERE u.id = tutoriales.autor_id
           AND u.auth_user_id = (SELECT auth.uid())
           AND u.rol = 'Creador'
+    )
+);
+
+-- =====================================================
+-- 4. TALLER 10 - ACTUALIZACIÓN DE ESTADOS
+-- =====================================================
+
+-- 4.1 Permiso de actualización
+-- Los usuarios autenticados pueden actualizar
+-- únicamente la columna estado de tutoriales.
+-- RLS determina cuáles filas pueden modificar.
+
+GRANT UPDATE (estado)
+ON public.tutoriales
+TO authenticated;
+
+-- 4.2 Política de actualización según rol
+-- Creador: puede enviar sus borradores a revisión.
+-- Revisor: puede aprobar o devolver tutoriales.
+-- La validación adicional del flujo se implementa
+-- en los siguientes pasos del taller.
+
+DROP POLICY IF EXISTS tutoriales_actualizar_estado
+ON public.tutoriales;
+
+CREATE POLICY tutoriales_actualizar_estado
+ON public.tutoriales
+FOR UPDATE
+TO authenticated
+USING (
+    (
+        estado = 'borrador'
+        AND EXISTS (
+            SELECT 1
+            FROM public.usuarios AS u
+            WHERE u.id = tutoriales.autor_id
+              AND u.auth_user_id = (SELECT auth.uid())
+              AND u.rol = 'Creador'
+        )
+    )
+    OR
+    (
+        estado = 'en_revision'
+        AND EXISTS (
+            SELECT 1
+            FROM public.usuarios AS u
+            WHERE u.auth_user_id = (SELECT auth.uid())
+              AND u.rol = 'Revisor'
+        )
+    )
+)
+WITH CHECK (
+    (
+        estado = 'en_revision'
+        AND EXISTS (
+            SELECT 1
+            FROM public.usuarios AS u
+            WHERE u.id = tutoriales.autor_id
+              AND u.auth_user_id = (SELECT auth.uid())
+              AND u.rol = 'Creador'
+        )
+    )
+    OR
+    (
+        estado IN ('publicado', 'borrador')
+        AND EXISTS (
+            SELECT 1
+            FROM public.usuarios AS u
+            WHERE u.auth_user_id = (SELECT auth.uid())
+              AND u.rol = 'Revisor'
+        )
     )
 );
 
