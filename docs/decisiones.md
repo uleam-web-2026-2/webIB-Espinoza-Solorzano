@@ -82,7 +82,7 @@ Se ajusta mejor al comportamiento esperado: conservar temporalmente lo escrito d
 
 ### Evidencias
 
-- `docs/taller10/capturas/fase4_borrador_recuperado.jpg`
+- `docs/taller10/capturas/fase4_borrador_recuperado.png`
 - `docs/taller10/capturas/fase4_borrador_error.png`
 - `docs/taller10/capturas/fase4_borrador_eliminado.png`
 

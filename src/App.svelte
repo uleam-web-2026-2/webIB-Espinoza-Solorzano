@@ -71,6 +71,9 @@
   let error = $state("");
   let errorPerfil = $state("");
 
+  // Aviso cuando el token guardado ya no es válido.
+  let avisoSesion = $state("");
+
   // Estado para las modificaciones de tutoriales.
   let cambiandoId = $state<number | null>(null);
   let mensajeCambio = $state("");
@@ -127,6 +130,10 @@
           session = null;
           tutorialSeleccionado = null;
           tutoriales = [];
+
+          // Avisar y continuar con el listado público.
+          avisoSesion =
+            "Su sesión venció. Inicie sesión otra vez.";
         }
       }
 
@@ -217,6 +224,11 @@
           evento !== "SIGNED_OUT"
         ) {
           return;
+        }
+
+        // Al iniciar sesión otra vez, quitar el aviso.
+        if (evento === "SIGNED_IN") {
+          avisoSesion = "";
         }
 
         const nuevoUsuarioId =
@@ -480,6 +492,13 @@
       ? "Tutoriales visibles para mí"
       : "Tutoriales publicados"}
   </h1>
+
+  <!-- Aviso de sesión vencida -->
+  {#if avisoSesion}
+    <p role="alert" class="mensaje-error">
+      {avisoSesion}
+    </p>
+  {/if}
 
   <!-- Mensaje de error al consultar el perfil -->
   {#if errorPerfil}

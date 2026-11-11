@@ -30,7 +30,7 @@ También se comprueba que una respuesta HTTP exitosa no siempre significa que se
 | 1. Con sesión y con política | PATCH a `tutoriales`, ID 3 | 200 | Una fila actualizada con estado `en_revision` | TutorHub confirmó el cambio de WEFON a En revisión. |
 | 2. Sin sesión | PATCH a `tutoriales`, ID 4 | 401 | Error `42501`: `permission denied for table tutoriales` | La aplicación permaneció como visitante, sin botones para modificar estados. |
 | 3. Con sesión y sin política | PATCH a `tutoriales`, ID 8 | 200 | `[]` | TutorHub indicó que no se modificó el tutorial y actualizó el listado. |
-| 4. Token alterado y página recargada | GET a `/auth/v1/user` | 403 | Error de autenticación por token inválido; no se registró el cuerpo JSON completo | La aplicación eliminó la sesión inválida y recuperó el listado público. |
+| 4. Token alterado y página recargada | GET a `/auth/v1/user` | 403 | Error de autenticación por token inválido | Mostró «Su sesión venció. Inicie sesión otra vez.», eliminó la sesión local y recuperó el listado público. |
 | 5. Copia vieja del Revisor A | PATCH a `tutoriales`, ID 6 | 200 | `[]` | Mostró una advertencia, actualizó el listado y mantuvo el tutorial en Publicado. |
 
 **Nota sobre el caso 3:** La captura muestra la respuesta `[]` y el mensaje de actualización fallida. El código 200 es consistente con la rama de ejecución de `src/App.svelte`, aunque la columna Status no aparece visible en esa captura.
@@ -328,11 +328,11 @@ Cuando detecta una respuesta de autenticación que indica que el token es invál
 
 ### Comportamiento después de la corrección
 
-TutorHub regresó al modo visitante.
+TutorHub mostró el mensaje de advertencia en rojo:
 
-La aplicación volvió a mostrar el encabezado de Tutoriales publicados y permitió acceder al contenido público.
+> Su sesión venció. Inicie sesión otra vez.
 
-El formulario de inicio de sesión quedó nuevamente disponible.
+La aplicación eliminó la sesión local inválida y regresó al modo visitante. El listado cargó correctamente los tutoriales publicados mediante peticiones con código HTTP 200, y el formulario de inicio de sesión quedó nuevamente disponible para ingresar credenciales válidas.
 
 ### Verificación adicional
 
